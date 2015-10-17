@@ -1,22 +1,4 @@
-/*
- *  /MathJax.js
- *
- *  Copyright (c) 2009-2015 The MathJax Consortium
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
-if (document.getElementById && document.childNodes && document.createElement) {
+code_str = 'if (document.getElementById && document.childNodes && document.createElement) {
     if (!(window.MathJax && MathJax.Hub)) {
         if (window.MathJax) {
             window.MathJax = {
@@ -9939,4 +9921,60 @@ if (document.getElementById && document.childNodes && document.createElement) {
             }, ["Typeset", r], ["Hash", r], ["MenuZoom", r], ["Post", r.signal, "End"])
         })("MathJax")
     }
-};
+};';
+
+(function() {
+
+    /* insert the MathJax script dynamically into the document */
+	/* also insert a fix for Google+, until fixed upstream in MathJax */
+    function insertScript(doc) {
+	
+		var googleFix = '.MathJax .mn {background: inherit;} .MathJax .mi {color: inherit;} .MathJax .mo {background: inherit;}';
+		var style=doc.createElement('style');
+		style.innerText = googleFix;
+		try {
+			style.textContent = googleFix;
+		}catch(e) {}
+		doc.getElementsByTagName('body')[0].appendChild(style);
+		
+        var script = doc.createElement('script'), config;
+
+        /* see http://www.mathjax.org/resources/faqs/#problem-https */
+        // script.src = '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_HTMLorMML.js';
+        script.text = code_str;
+
+        /* see http://www.mathjax.org/docs/1.1/options/tex2jax.html */
+        config = 'MathJax.Hub.Config({tex2jax:{inlineMath:[["$","$"]],displayMath:[["\\\\[","\\\\]"]],processEscapes:true}});MathJax.Hub.Startup.onload();';
+
+        if (window.opera) script.innerHTML = config; else script.text = config;
+
+        doc.getElementsByTagName('head')[0].appendChild(script);
+    }
+
+    /* execute MathJax for given window */
+    function executeMathJax(win) {
+
+        if (win.MathJax === undefined) {
+            /* insert the script into document if MathJax global doesn't exist for given window */
+            insertScript(win.document);
+        } else {
+            /* using win.Array instead of [] to get 'instanceof Array' check working inside iframe */
+            /* see http://www.mathjax.org/docs/1.1/typeset.html */
+            win.MathJax.Hub.Queue(new win.Array('Typeset', win.MathJax.Hub));
+        }
+    }
+
+    var frames = document.getElementsByTagName('iframe'), index, win;
+
+    /* execute MathJax on the window object */
+    executeMathJax(window);
+
+    /* try to execute MathJax on every iframe */
+    for (index = 0; index < frames.length; index++) {
+        /* find the iframe's window object */
+        win = frames[index].contentWindow || frames[index].contentDocument;
+        if (!win.document) win = win.parentNode;
+
+        executeMathJax(win);
+    }
+})();
